@@ -33,14 +33,13 @@ def single_plot_multiple_ts_plotly(df, kind="line", title=None, xlabel=None, yla
     
     kind: line, bar, scatter
     """
-    pd.options.plotting.backend = "plotly"
     df_copy = df.copy()
     columns = df_copy.columns
     index = df_copy.index.name
     
     df_copy = df_copy.reset_index()
     
-    fig = df_copy.plot(x=index, y=columns, kind=kind)
+    fig = df_copy.plot(x=index, y=columns, kind=kind, backend="plotly")
     
     fig.update_xaxes(title_text=xlabel)
     fig.update_yaxes(title_text=ylabel)
