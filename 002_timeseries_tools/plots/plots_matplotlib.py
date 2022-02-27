@@ -3,35 +3,65 @@ from calendar import month_abbr
 import matplotlib.pyplot as plt
 import pandas as pd
 import statsmodels.api as sm
+from matplotlib.lines import Line2D
 from statsmodels.graphics.tsaplots import plot_acf, plot_pacf
 
 
-def year_over_year_mplot(df, calc, title=None, xlabel="month", ylabel="value", figsize=(10,6)):
-    """
-    Plots time series year over year. x-axis are months of the year
-    """
+def year_over_year_mplot(df, calc, title=None, xlabel="value", figsize=(12,8)):
     df = df.copy()
     columns = df.columns.tolist()
     df['month'] = df.index.strftime('%b')
     df['year'] = df.index.year
 
-    # transform
+    # aggregation
     if calc=="mean":
         dfp = pd.pivot_table(data=df, index='month', columns='year', values=columns, aggfunc='mean')
     elif calc=="sum":
         dfp = pd.pivot_table(data=df, index='month', columns='year', values=columns, aggfunc='sum')
     else:
         raise ValueError("calc must be either mean or sum")
-    
-    # the dfp index so the x-axis will be in order
-    dfp = dfp.loc[month_abbr[1:]]
+    cmap = plt.cm.coolwarm
 
-    ax = dfp.plot(xlabel=xlabel, ylabel=ylabel, title=title, figsize=figsize)
-    ax.set_xticks(range(12))  # set ticks for all months
-    ax.set_xticklabels(dfp.index)  
-    ax.legend(bbox_to_anchor=(1, 1.02), loc='upper left')
+    dfp = dfp.loc[month_abbr[1:]] # re-order the indexes
     
-    return ax
+    months_dict = dict(enumerate(dfp.index, 1))
+    years = dfp.columns.tolist()
+
+    # color map codes for smarter color code. each year has its own color
+    cmap_codes = np.linspace(0, 1, len(years))
+    cmap_codes = [cmap(x) for x in cmap_codes]
+    color_dict = dict(zip(years, cmap_codes))
+
+    height = 0.9 / len(years)
+
+    fig, ax = plt.subplots(1, 1, figsize=figsize)
+    
+    for i, month in enumerate(months):
+        ind = i + 1
+        for year in years:
+            value = dfp.loc[month, year]
+            ax.barh(ind, value, height= 0.9* height, color=color_dict[year])
+            if np.isnan(value) == False: # add value callout using text, only if not nan
+                plt.rcParams.update({'font.size': 6})
+                ax.text(value, ind, f"{value:.2f}")
+                plt.rcParams.update(plt.rcParamsDefault)
+            ind = ind + height
+            
+    # set y ticks as name of months
+    ax.set_yticks(list(months_dict.keys()))
+    ax.set_yticklabels(list(months_dict.values()))
+    ax.set_xlabel(xlabel)
+    
+    if title:
+        ax.set_title(title)
+    
+    # custom legend 
+    custom_lines = [Line2D([0], [0], color=cmap_code, lw=4) for cmap_code in cmap_codes]
+    ax.legend(custom_lines, years)
+    fig = ax.get_figure()
+    fig.tight_layout()
+    
+    return fig
 
 def single_plot_multiple_ts_mplot(df, kind="line", title=None, xlabel=None, ylabel="value", figsize=(10,6)):
     """
