@@ -1,21 +1,17 @@
-FROM ubuntu 
-
-RUN apt-get update && \
-    apt-get install --assume-yes --fix-missing python-pip git
-
 FROM python:3.7-slim
 
-# Mount current directory to /app in the container image
-VOLUME ./:app/
+WORKDIR 005_model_deploy
+# COPY setup.py setup.py
+COPY requirements.txt requirements.txt
+COPY Makefile Makefile
 
-COPY . /app/
+RUN apt-get update \
+    && apt-get install -y 
 
-# Change WORKDIR
-WORKDIR /app
+COPY app app
+COPY models models
 
 RUN pip install -r requirements.txt
 
-EXPOSE 9999:9999
-ENTRYPOINT python flask_api.py 9999
-
-CMD ["flask_api.py"]
+EXPOSE 5000
+ENTRYPOINT ["uvicorn", "app.api:app", "--host", "0.0.0.0", "--port", "5000", "--reload", "--reload-dir", "app"]
